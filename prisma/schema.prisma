@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+
+  reviews   Review[]
+  orders    Order[]
+  cart      CartItem[]
+  games     Game[]
+
+  estado    Boolean   @default(true)
+  token     String?
+}
+
+model Game {
+  id            Int         @id @default(autoincrement())
+  title         String
+  description   String
+  price         Float
+  publisher     String
+  createdAt     DateTime    @default(now())
+  estaOferta    Boolean     @default(false)
+  estado        Boolean     @default(true)
+
+  user          User        @relation(fields: [userId], references: [id])
+  userId        Int
+
+  categoria     Categoria   @relation(fields: [categoriaId], references: [id])
+  categoriaId   Int
+
+  plataforma    Plataforma  @relation(fields: [plataformaId], references: [id])
+  plataformaId  Int
+
+  reviews       Review[]
+  cartItems     CartItem[]
+  orders        Order[]
+}
+
+model Review {
+  id      Int    @id @default(autoincrement())
+  content String
+  stars   Int
+
+  user    User   @relation(fields: [userId], references: [id])
+  userId  Int
+
+  game    Game   @relation(fields: [gameId], references: [id])
+  gameId  Int
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  total     Float
+  createdAt DateTime @default(now())
+  code      String   @unique
+
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+
+  game      Game     @relation(fields: [gameId], references: [id])
+  gameId    Int
+}
+
+model CartItem {
+  id      Int   @id @default(autoincrement())
+
+  user    User  @relation(fields: [userId], references: [id])
+  userId  Int
+
+  game    Game  @relation(fields: [gameId], references: [id])
+  gameId  Int
+}
+
+model News {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  activo    Boolean  @default(true)
+}
+
+model Categoria {
+  id      Int     @id @default(autoincrement())
+  nombre  String
+
+  games   Game[]
+}
+
+model Plataforma {
+  id      Int     @id @default(autoincrement())
+  nombre  String
+
+  games   Game[]
+}
