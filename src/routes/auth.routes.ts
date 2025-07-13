@@ -1,9 +1,15 @@
 import { Router } from 'express';
-import { register, login } from '../controllers/auth.controller';
+// Importamos el objeto authController completo
+import { authController } from '../controllers/auth.controller';
+import { authenticate } from '../middlewares/auth.middleware'; // Importa tu middleware de autenticación
 
 const router = Router();
 
-router.post('/register', register);
-router.post('/login', login);
+// Usamos los métodos del objeto authController
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+
+// Ruta para obtener el perfil del usuario autenticado, protegida por el middleware
+router.get('/profile', authenticate, authController.getProfile);
 
 export default router;

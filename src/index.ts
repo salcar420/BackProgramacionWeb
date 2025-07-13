@@ -12,6 +12,8 @@ import reviewRoutes from './routes/review.routes';
 import cartRoutes from './routes/cart.routes';
 import orderRoutes from './routes/order.routes';
 import adminRoutes from './routes/admin.routes';
+import categoriaRoutes from './routes/categoria.routes';
+import plataformaRoutes from './routes/plataforma.routes';
 
 dotenv.config();
 
@@ -25,20 +27,22 @@ app.use(express.json());
 
 // Rutas principales
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/users', userRoutes); // Usamos las rutas de usuario
 app.use('/api/games', gameRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/categorias', categoriaRoutes); // Ruta para categorías
+app.use('/api/plataformas', plataformaRoutes); // Ruta para plataformas
 
 // Ruta base
 app.get('/', (_req, res) => {
-  res.status(200).send('API funcionando correctamente');
+    res.status(200).send('API funcionando correctamente');
 });
 
 // Inicialización del servidor
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
