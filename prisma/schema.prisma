@@ -10,7 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Modelo de Usuario - ¡CAMBIO CLAVE AQUÍ!
+// Modelo de Usuario
 model User {
   id        Int       @id @default(autoincrement())
   name      String
@@ -20,8 +20,7 @@ model User {
   estado    Boolean   @default(true)
   token     String?
   verificationCode String?
-  role      String    @default("user") // <--- ¡NUEVA LÍNEA AÑADIDA!
-  // Esto crea una columna 'role' de tipo texto con valor por defecto 'user'.
+  role      String    @default("user")
 
   reviews   Review[]
   orders    Order[] @relation(name: "UserToOrder")
@@ -39,8 +38,8 @@ model Game {
   estaOferta    Boolean     @default(false)
   estado        Boolean     @default(true)
 
-  image         String?     // Nuevo campo para la imagen
-  bannerImage   String?     // Nuevo campo para la imagen del banner
+  image         String?
+  bannerImage   String?
 
   user          User        @relation(fields: [userId], references: [id])
   userId        Int
@@ -102,14 +101,15 @@ model News {
 
 model Categoria {
   id      Int     @id @default(autoincrement())
-  nombre  String
+  nombre  String  @unique
 
   games   Game[]
 }
 
 model Plataforma {
   id      Int     @id @default(autoincrement())
-  nombre  String 
+  nombre  String  @unique
   imagenPlataforma String?
+
   games   Game[]
 }

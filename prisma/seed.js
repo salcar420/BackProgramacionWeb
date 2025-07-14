@@ -1,218 +1,248 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Insertar usuarios
-  const user1 = await prisma.user.create({
-    data: {
-      name: 'Usuario 1333346',
-      email: 'usuario1333346@example.com',
-      password: 'password123',  // Asegúrate de encriptar las contraseñas
+  // Hashear contraseña del administrador
+  const adminPassword = await bcrypt.hash('AdminPass123!', 10);
+
+  // Upsert administrador: crea o actualiza la contraseña y campos
+  await prisma.user.upsert({
+    where: { email: 'admin@example.com' },
+    update: {
+      password: adminPassword,
+      estado: true,
+      role: 'admin',
+      verificationCode: null,
+      token: null,
+    },
+    create: {
+      name: 'Administrador',
+      email: 'admin@example.com',
+      password: adminPassword,
+      estado: true,
+      role: 'admin',
+      verificationCode: null,
+      token: null,
     },
   });
 
-  const user2 = await prisma.user.create({
-    data: {
-      name: 'Usuario 2333346',
-      email: 'usuario2333346@example.com',
-      password: 'password123',  // Asegúrate de encriptar las contraseñas
+  // Hashear contraseña del usuario normal
+  const userPassword = await bcrypt.hash('12345678', 10);
+
+  // Upsert usuario normal
+  const user = await prisma.user.upsert({
+    where: { email: 'homeuser@example.com' },
+    update: {
+      password: userPassword,
+      estado: true,
+      role: 'user',
+      verificationCode: null,
+      token: null,
+    },
+    create: {
+      name: 'Usuario Home',
+      email: 'homeuser@example.com',
+      password: userPassword,
+      estado: true,
+      role: 'user',
+      verificationCode: null,
+      token: null,
     },
   });
 
-  // Insertar categorías
-  const accion = await prisma.categoria.create({
-    data: { nombre: 'Acción' },
-  });
-  const aventura = await prisma.categoria.create({
-    data: { nombre: 'Aventura' },
-  });
-  const rpg = await prisma.categoria.create({
-    data: { nombre: 'RPG' },
-  });
+  // Crear categorías
+  const [accion, aventura, rpg] = await Promise.all([
+    prisma.categoria.upsert({
+      where: { nombre: 'Acción' },
+      update: {},
+      create: { nombre: 'Acción' },
+    }),
+    prisma.categoria.upsert({
+      where: { nombre: 'Aventura' },
+      update: {},
+      create: { nombre: 'Aventura' },
+    }),
+    prisma.categoria.upsert({
+      where: { nombre: 'RPG' },
+      update: {},
+      create: { nombre: 'RPG' },
+    }),
+  ]);
 
-  // Insertar plataformas con imagen usando upsert
-  const plataformas = [
-    {
-      nombre: 'PC',
-      imagenPlataforma: '/Imagenes/PS5.png',  // Ruta de la imagen
-    },
-    {
-      nombre: 'PlayStation',
-      imagenPlataforma: '/Imagenes/PS5.png',  // Ruta de la imagen
-    },
-    {
-      nombre: 'Xbox',
-      imagenPlataforma: '/Imagenes/PS5.png',  // Ruta de la imagen
-    }
-  ];
+  // Crear plataformas
+  const plataformas = {
+    PC: await prisma.plataforma.upsert({
+      where: { nombre: 'PC' },
+      update: {},
+      create: { nombre: 'PC', imagenPlataforma: '/Imagenes/PC3.PNG' },
+    }),
+    PlayStation: await prisma.plataforma.upsert({
+      where: { nombre: 'PlayStation' },
+      update: {},
+      create: { nombre: 'PlayStation', imagenPlataforma: '/Imagenes/PS5.png' },
+    }),
+    Xbox: await prisma.plataforma.upsert({
+      where: { nombre: 'Xbox' },
+      update: {},
+      create: { nombre: 'Xbox', imagenPlataforma: '/Imagenes/XBOX.png' },
+    }),
+    Nintendo: await prisma.plataforma.upsert({
+      where: { nombre: 'Nintendo' },
+      update: {},
+      create: { nombre: 'Nintendo', imagenPlataforma: '/Imagenes/NINTENDO.png' },
+    }),
+  };
 
-  for (const plataforma of plataformas) {
-    await prisma.plataforma.upsert({
-      where: { nombre: plataforma.nombre }, // Verifica si la plataforma ya existe por su nombre
-      update: {}, // Si existe, no se actualiza nada
-      create: plataforma, // Si no existe, se crea
-    });
-  }
-
-  // Insertar juegos (con las relaciones de categorías y plataformas)
+  // Juegos a insertar
   const juegos = [
     {
-      title: 'Street Fighter 6',
-      description: 'Nuevo capítulo de la legendaria saga de juegos de lucha.',
-      price: 49.99,
-      publisher: 'Capcom',
-      categoriaId: accion.id,
-      plataformaId: 1,  // Asumimos que 'PC' tiene id = 1, usa el id real
-      image: '/Imagenes/SF6.avif',
-      bannerImage: '/Imagenes/SF6_BANNER.avif',
-      estado: true,
-      estaOferta: false,
+      title: 'NBA 2K25',
+      description: 'La entrega anual de la serie NBA 2K...',
+      price: 53.99,
+      publisher: '2K Sports',
+      image: '/Imagenes/2k25.png',
+      bannerImage: '/Imagenes/NBA2.jpg',
+      categoria: accion,
+      plataforma: plataformas.Nintendo,
     },
     {
-      title: 'Mario Kart Deluxe 8',
-      description: 'El juego de carreras más divertido y rápido de Nintendo.',
-      price: 49.99,
-      publisher: 'Nintendo',
-      categoriaId: aventura.id,
-      plataformaId: 1,  // Asumimos que 'PC' tiene id = 1, usa el id real
-      image: '/Imagenes/MK.jpeg',
-      bannerImage: '/Imagenes/MK_BANNER.avif',
-      estado: true,
-      estaOferta: false,
+      title: 'Diablo IV',
+      description: 'Regresa el oscuro mundo de Santuario...',
+      price: 29.99,
+      publisher: 'Blizzard',
+      image: '/Imagenes/DiabloiV.png',
+      bannerImage: '/Imagenes/DiabloiV_banner.png',
+      categoria: rpg,
+      plataforma: plataformas.PlayStation,
+    },
+    {
+      title: 'Tekken 8',
+      description: 'Nueva entrega del clásico de peleas...',
+      price: 5.99,
+      publisher: 'Bandai Namco',
+      image: '/Imagenes/TEKKEN8.png',
+      bannerImage: '/Imagenes/TEKKEN8.png',
+      categoria: accion,
+      plataforma: plataformas.Xbox,
+    },
+    {
+      title: 'Final Fantasy VII Rebirth',
+      description: 'Segunda parte del remake de FFVII...',
+      price: 44.99,
+      publisher: 'Square Enix',
+      image: '/Imagenes/FF.png',
+      bannerImage: '/Imagenes/FF_BANNER.jpg',
+      categoria: rpg,
+      plataforma: plataformas.Nintendo,
+    },
+    {
+      title: 'Call of Duty: Modern Warfare III',
+      description: 'Continuación directa de MWII...',
+      price: 69.29,
+      publisher: 'Activision',
+      image: '/Imagenes/COD.png',
+      bannerImage: '/Imagenes/COD.webp',
+      categoria: accion,
+      plataforma: plataformas.PlayStation,
+    },
+    {
+      title: 'Resident Evil 4 (Remake)',
+      description: 'Reimaginación moderna del clásico de 2005...',
+      price: 24.99,
+      publisher: 'Capcom',
+      image: '/Imagenes/RE.png',
+      bannerImage: '/Imagenes/RE_BANNER.jpg',
+      categoria: accion,
+      plataforma: plataformas.PC,
+    },
+    {
+      title: 'Hogwarts Legacy',
+      description: 'Ambientado en el universo de Harry Potter...',
+      price: 53.99,
+      publisher: 'Warner Bros',
+      image: '/Imagenes/HL.webp',
+      bannerImage: '/Imagenes/HL_BANNER.avif',
+      categoria: aventura,
+      plataforma: plataformas.PlayStation,
     },
     {
       title: 'The Legend of Zelda: Tears of the Kingdom',
-      description: 'Videojuego de acción-aventura y mundo abierto de 2023 de la serie The Legend of Zelda.',
-      price: 59.99,
+      description: 'Secuela de Breath of the Wild...',
+      price: 53.99,
       publisher: 'Nintendo',
-      categoriaId: aventura.id,
-      plataformaId: pc.id,
       image: '/Imagenes/ZELDA COVER.jpg',
       bannerImage: '/Imagenes/ZELDA.avif',
-      estado: true,
-      estaOferta: false,
+      categoria: aventura,
+      plataforma: plataformas.Nintendo,
     },
     {
-      title: 'Elden Ring',
-      description: 'Un RPG de acción de mundo abierto de FromSoftware, basado en el trabajo de George R. R. Martin.',
-      price: 59.99,
-      publisher: 'Bandai Namco Entertainment',
-      categoriaId: rpg.id,
-      plataformaId: pc.id,
-      image: '/Imagenes/ELDENRING.jpg',
-      bannerImage: '/Imagenes/EBANNER.png',
-      estado: true,
-      estaOferta: false,
+      title: 'Street Fighter 6',
+      description: 'La legendaria saga de lucha evoluciona...',
+      price: 5.99,
+      publisher: 'Capcom',
+      image: '/Imagenes/SF6.avif',
+      bannerImage: '/Imagenes/SF6_BANNER.avif',
+      categoria: accion,
+      plataforma: plataformas.Xbox,
     },
     {
-      title: 'Marvel\'s Spider-Man 2',
-      description: 'Secuela del popular juego de acción-aventura protagonizado por Spider-Man.',
-      price: 59.99,
-      publisher: 'Sony Interactive Entertainment',
-      categoriaId: accion.id,
-      plataformaId: pc.id,
-      image: '/Imagenes/SPIDERMAN.png',
-      bannerImage: '/Imagenes/SPID2.png',
-      estado: true,
-      estaOferta: false,
-    },
-    {
-      title: 'Cyberpunk 2077',
-      description: 'Juego de rol y acción en un futuro distópico en la ciudad de Night City.',
-      price: 49.99,
-      publisher: 'CD Projekt Red',
-      categoriaId: rpg.id,
-      plataformaId: pc.id,
-      image: '/Imagenes/CYBERPUNK.jpeg',
-      bannerImage: '/Imagenes/CYBERP.jpg',
-      estado: true,
-      estaOferta: false,
-    },
-    {
-      title: 'Astro Bot Rescue Mission',
-      description: 'Un juego de acción y aventuras de realidad virtual para PlayStation VR.',
+      title: 'Starfield',
+      description: 'Aventura intergaláctica de exploración...',
       price: 29.99,
-      publisher: 'Sony Interactive Entertainment',
-      categoriaId: aventura.id,
-      plataformaId: pc.id,
-      image: '/Imagenes/AB.png.webp',
-      bannerImage: '/Imagenes/ABANNEER.jpg',
-      estado: true,
-      estaOferta: true,
-    },
-    {
-      title: 'GTA V',
-      description: 'Un juego de acción y aventuras en mundo abierto con una historia envolvente.',
-      price: 29.99,
-      publisher: 'Rockstar Games',
-      categoriaId: accion.id,
-      plataformaId: pc.id,
-      image: '/Imagenes/GTA.jpg',
-      bannerImage: '/Imagenes/GTA54.jpeg',
-      estado: true,
-      estaOferta: true,
-    },
-    {
-      title: 'God of War Ragnarok',
-      description: 'Una épica secuela de God of War, centrada en la mitología nórdica.',
-      price: 49.99,
-      publisher: 'Sony Interactive Entertainment',
-      categoriaId: aventura.id,
-      plataformaId: pc.id,
-      image: '/Imagenes/GOW.png',
-      bannerImage: '/Imagenes/gw.jpg',
-      estado: true,
-      estaOferta: false,
-    },
-    {
-      title: 'Red Dead Redemption 2',
-      description: 'Un juego de acción-aventura en mundo abierto que sigue la vida de los forajidos.',
-      price: 39.99,
-      publisher: 'Rockstar Games',
-      categoriaId: aventura.id,
-      plataformaId: pc.id,
-      image: '/Imagenes/RD2.png',
-      bannerImage: '/Imagenes/RD2_banner.jpeg',
-      estado: true,
-      estaOferta: false,
-      videoUrls: ['https://www.youtube.com/embed/tx8BPmTMS_o'],
+      publisher: 'Bethesda',
+      image: '/Imagenes/STARFIELD.png',
+      bannerImage: '/Imagenes/STARFIEL_BANNER.jpg',
+      categoria: rpg,
+      plataforma: plataformas.Xbox,
     },
   ];
 
   for (const juego of juegos) {
-    await prisma.game.upsert({
-      where: { title: juego.title }, // Usamos 'title' como clave única
-      update: {}, // Si el juego ya existe, no se actualiza nada
+    const createdGame = await prisma.game.upsert({
+      where: { title: juego.title },
+      update: {},
       create: {
         title: juego.title,
         description: juego.description,
         price: juego.price,
         publisher: juego.publisher,
-        userId: user1.id,  // O user2.id si prefieres otro usuario
-        categoriaId: juego.categoriaId,
-        plataformaId: juego.plataformaId,
+        userId: user.id,
+        categoriaId: juego.categoria.id,
+        plataformaId: juego.plataforma.id,
         image: juego.image,
         bannerImage: juego.bannerImage,
-        estado: juego.estado,
-        estaOferta: juego.estaOferta,
+        estaOferta: true,
+        estado: true,
       },
+    });
+
+    await prisma.review.createMany({
+      data: [
+        {
+          userId: user.id,
+          gameId: createdGame.id,
+          stars: 5,
+          content: "¡Increíble juego, superó mis expectativas!",
+        },
+        {
+          userId: user.id,
+          gameId: createdGame.id,
+          stars: 4,
+          content: "Muy entretenido, aunque podría mejorar en gráficos.",
+        },
+        {
+          userId: user.id,
+          gameId: createdGame.id,
+          stars: 3,
+          content: "Está bien, pero la jugabilidad no me convenció del todo.",
+        },
+      ],
     });
   }
 
-  // Consultar juegos con la plataforma
-  const juegosConPlataforma = await prisma.game.findMany({
-    include: {
-      plataforma: true, // Incluir los datos de la plataforma asociada
-    },
-  });
-
-  juegosConPlataforma.forEach(juego => {
-    console.log('Juego:', juego.title);
-    console.log('Imagen Plataforma:', juego.plataforma.imagenPlataforma); // Esto debería mostrar la imagen de la plataforma
-  });
-
-  console.log('¡Datos iniciales insertados!');
+  console.log('🌱 Juegos y reseñas insertados con éxito');
 }
 
 main()
@@ -220,6 +250,4 @@ main()
     console.error(e);
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .finally(() => prisma.$disconnect());

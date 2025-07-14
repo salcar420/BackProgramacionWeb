@@ -1,16 +1,15 @@
+// src/index.ts
 import express, { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
-import authRoutes from './routes/auth.routes';
-import userRoutes from './routes/user.routes';
-import adminRoutes from './routes/admin.routes';
-import newsRoutes from './routes/news.routes';
-import gameRoutes from './routes/game.routes';
-import categoriaRoutes from './routes/categoria.routes';
-import plataformaRoutes from './routes/plataforma.routes';
-import statisticsRoutes from './routes/statistics.routes';
 import path = require('path');
+
+import authRoutes from './routes/auth.routes';
+import cartRoutes from './routes/cart.routes';
+import gameRoutes from './routes/game.routes';
+// importa otras rutas que tengas
+
 dotenv.config();
 
 const app = express();
@@ -22,14 +21,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/Imagenes', express.static(path.join(__dirname, '../Imagenes')));
+
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/news', newsRoutes);
+app.use('/api/cart', cartRoutes);
 app.use('/api/games', gameRoutes);
-app.use('/api/categorias', categoriaRoutes);
-app.use('/api/plataformas', plataformaRoutes);
-app.use('/api/admin/sales', statisticsRoutes);
+// usa otras rutas
 
 app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'API de Backend funcionando correctamente!' });
