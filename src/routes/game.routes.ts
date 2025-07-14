@@ -6,7 +6,7 @@ import { authenticate } from '../middlewares/auth.middleware'; // Correcto: impo
 
 const router = Router();
 
-router.get('/', authenticate, gameController.getAllGames); // Esto funcionará si gameController.getAllGames es una función
+router.get('/', gameController.getAllGames);
 router.get('/:id', authenticate, gameController.getGameById);
 router.post('/', authenticate, gameController.createGame);
 router.put('/:id', authenticate, gameController.updateGame);

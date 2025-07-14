@@ -10,7 +10,7 @@ import gameRoutes from './routes/game.routes';
 import categoriaRoutes from './routes/categoria.routes';
 import plataformaRoutes from './routes/plataforma.routes';
 import statisticsRoutes from './routes/statistics.routes';
-
+import path = require('path');
 dotenv.config();
 
 const app = express();
@@ -21,6 +21,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/Imagenes', express.static(path.join(__dirname, '../Imagenes')));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
