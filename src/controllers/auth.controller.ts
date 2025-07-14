@@ -1,12 +1,13 @@
-// src/controllers/auth.controller.ts
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { sendVerificationEmail } from '../utils/mailer'; // Importamos el mailer
 
 const prisma = new PrismaClient();
 
 export const authController = {
+  // Registro del usuario
   register: async (req: Request, res: Response) => {
     try {
       const { name, email, password } = req.body;
@@ -22,24 +23,85 @@ export const authController = {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // Genera un código de verificación aleatorio
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString(); // Código de 6 dígitos
+
+      // Crea el nuevo usuario en la base de datos, guardando el código de verificación
       const newUser = await prisma.user.create({
         data: {
           name,
           email,
           password: hashedPassword,
-          estado: true,
-          role: 'user', // Asigna un rol por defecto 'user' al registrar
-          token: '', // Podrías considerar no guardar el token aquí, o manejarlo de otra forma si solo es para sesión.
+          estado: false,  // Estado 'false' hasta que el usuario verifique el código
+          role: 'user',
+          verificationCode,  // Guarda el código de verificación
         }
       });
 
-      res.status(201).json({ message: 'Usuario registrado exitosamente', user: newUser });
+      // Enviar correo de verificación
+      await sendVerificationEmail(email, verificationCode);
+
+      res.status(201).json({ message: 'Usuario registrado exitosamente. Revisa tu correo para el código de verificación.' });
     } catch (error) {
       console.error('❌ Error en el registro:', error);
       res.status(500).json({ error: 'Error en el registro' });
     }
   },
 
+  // Verificación del correo
+  verifyEmail: async (req: Request, res: Response) => {
+    try {
+      const { token } = req.query;
+
+      if (!token) {
+        return res.status(400).json({ error: 'Falta el token de verificación' });
+      }
+
+      // Verificar el token (este es el que recibimos en el enlace)
+      const decoded = jwt.verify(token as string, process.env.JWT_SECRET!) as jwt.JwtPayload;
+
+      // Si el token es válido, marcamos el usuario como verificado
+      const user = await prisma.user.update({
+        where: { email: decoded.email },  // Asegurándonos de acceder a decoded.email
+        data: { estado: true },
+      });
+
+      res.status(200).json({ message: 'Cuenta verificada con éxito. Ahora puedes iniciar sesión.' });
+    } catch (error) {
+      console.error('❌ Error al verificar el correo:', error);
+      res.status(500).json({ error: 'Error al verificar el correo' });
+    }
+  },
+
+  // Verificación del código
+  verifyCode: async (req: Request, res: Response) => {
+    try {
+      const { email, code } = req.body;
+
+      const user = await prisma.user.findUnique({ where: { email } });
+
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      if (user.verificationCode !== code) {
+        return res.status(400).json({ error: 'Código incorrecto' });
+      }
+
+      // Si el código es correcto, cambiamos el estado del usuario a 'true' (verificado)
+      await prisma.user.update({
+        where: { email },
+        data: { estado: true },
+      });
+
+      res.status(200).json({ message: 'Verificación exitosa. Ahora puedes iniciar sesión.' });
+    } catch (error) {
+      console.error('❌ Error al verificar el código:', error);
+      res.status(500).json({ error: 'Error al verificar el código' });
+    }
+  },
+
+  // Inicio de sesión del usuario
   login: async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
@@ -60,9 +122,8 @@ export const authController = {
         return res.status(500).json({ error: 'Configuración del servidor incompleta.' });
       }
 
-      // CAMBIO CLAVE: Incluye 'role' en el payload del token JWT
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role }, // <--- ¡Asegúrate de que 'role: user.role' esté aquí!
+        { id: user.id, email: user.email, role: user.role }, 
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
@@ -72,7 +133,6 @@ export const authController = {
         data: { token }
       });
 
-      // Devuelve el rol del usuario al frontend en la respuesta del login
       res.status(200).json({ message: 'Login exitoso', token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } catch (error) {
       console.error('❌ Error en el login:', error);
@@ -80,17 +140,14 @@ export const authController = {
     }
   },
 
+  // Obtener perfil del usuario
   getProfile: async (req: Request, res: Response) => {
     try {
-      // El middleware 'authenticate' adjunta req.user con { id, email, role }
       const userIdFromToken = req.user?.id;
 
       if (!userIdFromToken) {
-        console.warn('⚠️ getProfile: ID de usuario no encontrado en req.user. Esto puede indicar un problema con el middleware de autenticación o un token inválido.');
         return res.status(401).json({ error: 'No autorizado: ID de usuario no encontrado en el token.' });
       }
-
-      console.log('Intentando obtener perfil para userId:', userIdFromToken); // Log para depuración
 
       const user = await prisma.user.findUnique({
         where: { id: userIdFromToken },
@@ -98,20 +155,19 @@ export const authController = {
           id: true,
           name: true,
           email: true,
-          estado: true, // Descomentado: Asumiendo que 'estado' ya existe y es booleano
-          role: true,   // Descomentado: Asumiendo que 'role' ya existe y es string
+          estado: true, 
+          role: true,
         },
       });
 
       if (!user) {
-        console.warn(`⚠️ getProfile: Usuario con ID ${userIdFromToken} no encontrado en la base de datos.`);
         return res.status(404).json({ error: 'Usuario no encontrado.' });
       }
 
       res.json(user);
-    } catch (error: any) {
-      console.error('❌ Error al obtener perfil del usuario:', error.message, error.stack);
-      res.status(500).json({ error: 'Error interno del servidor al obtener perfil.' });
+    } catch (error) {
+      console.error('❌ Error al obtener perfil del usuario:', error);
+      res.status(500).json({ error: 'Error al obtener perfil' });
     }
   },
 };

@@ -19,6 +19,7 @@ model User {
   createdAt DateTime  @default(now())
   estado    Boolean   @default(true)
   token     String?
+  verificationCode String?
   role      String    @default("user") // <--- ¡NUEVA LÍNEA AÑADIDA!
   // Esto crea una columna 'role' de tipo texto con valor por defecto 'user'.
 
