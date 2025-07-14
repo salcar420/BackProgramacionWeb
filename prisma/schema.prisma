@@ -20,8 +20,10 @@ model User {
   games     Game[]
 
   estado    Boolean   @default(true)
-  token     String?
+  code      String?   // código de verificación por correo (6 dígitos)
+  token     String?   // token para verificación por link o sesiones
 }
+
 
 model Game {
   id            Int         @id @default(autoincrement())
@@ -29,19 +31,19 @@ model Game {
   description   String
   price         Float
   publisher     String
+  image         String
+  bannerImage   String
+  videoUrls     String[]    // Esto es un array de URLs de videos para cada juego
   createdAt     DateTime    @default(now())
   estaOferta    Boolean     @default(false)
   estado        Boolean     @default(true)
 
   user          User        @relation(fields: [userId], references: [id])
   userId        Int
-
   categoria     Categoria   @relation(fields: [categoriaId], references: [id])
   categoriaId   Int
-
   plataforma    Plataforma  @relation(fields: [plataformaId], references: [id])
   plataformaId  Int
-
   reviews       Review[]
   cartItems     CartItem[]
   orders        Order[]
@@ -100,6 +102,6 @@ model Categoria {
 model Plataforma {
   id      Int     @id @default(autoincrement())
   nombre  String
-
+  image   String?  // Este es el campo que almacenarás la URL de la imagen
   games   Game[]
 }
