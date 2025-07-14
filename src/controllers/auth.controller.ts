@@ -7,6 +7,32 @@ import { sendVerificationEmail } from '../utils/mailer'; // Importamos el mailer
 const prisma = new PrismaClient();
 
 export const authController = {
+  changePassword: async (req: Request, res: Response) => {
+    try {
+      const { email, newPassword } = req.body;
+
+      // Verificar si el usuario existe en la base de datos
+      const user = await prisma.user.findUnique({ where: { email } });
+
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      // Hashear la nueva contraseña
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Actualizar la contraseña en la base de datos
+      await prisma.user.update({
+        where: { email },
+        data: { password: hashedPassword },
+      });
+
+      res.status(200).json({ message: 'Contraseña actualizada exitosamente. Inicia sesión.' });
+    } catch (error) {
+      console.error('❌ Error al cambiar la contraseña:', error);
+      res.status(500).json({ error: 'Error al cambiar la contraseña' });
+    }
+  },
   // Registro del usuario
   register: async (req: Request, res: Response) => {
     try {

@@ -15,5 +15,6 @@ router.post('/verify-code', authController.verifyCode);
 
 // Obtener perfil del usuario (protegida)
 router.get('/profile', authController.getProfile);
+router.post('/change-password', authController.changePassword);
 
 export default router;
