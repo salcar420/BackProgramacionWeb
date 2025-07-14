@@ -1,14 +1,20 @@
-import { Router } from 'express';
-import { userController } from '../controllers/user.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+        // src/routes/user.routes.ts
+        import { Router } from 'express';
+        import { userController } from '../controllers/user.controller';
+        import { authenticate, authorizeAdmin } from '../middlewares/auth.middleware'; // Necesitas tus middlewares de auth
 
-const router = Router();
+        const router = Router();
 
-router.get('/profile', authenticate, userController.getProfile);
+        // Ruta para obtener todos los usuarios (protegida para administradores)
+        router.get('/', authenticate, authorizeAdmin, userController.getAllUsers);
 
-// --- ¡NUEVA RUTA PARA OBTENER EL RECUENTO DE USUARIOS! ---
-// Esta ruta llamará a la nueva función `getUsersCount` en tu user.controller.
-// Es importante protegerla con el middleware `authenticate` si solo los usuarios logueados (administradores) deben acceder a esta información.
-router.get('/count', authenticate, userController.getUsersCount); // <--- ¡AÑADE ESTA LÍNEA!
+        // Ruta para obtener el conteo total de usuarios (protegida para administradores)
+        router.get('/count', authenticate, authorizeAdmin, userController.getUsersCount); // Usa getUsersCount para coincidir con tu frontend
 
-export default router;
+        // Ruta para obtener un usuario por ID (opcional, si la necesitas)
+        router.get('/:id', authenticate, authorizeAdmin, userController.getUserById);
+
+        // Puedes añadir rutas para crear, actualizar o eliminar usuarios aquí
+
+        export default router;
+    

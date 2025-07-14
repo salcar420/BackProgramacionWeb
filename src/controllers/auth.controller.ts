@@ -1,3 +1,4 @@
+// src/controllers/auth.controller.ts
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -5,7 +6,6 @@ import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
 
-// Exportamos un objeto 'authController' que contiene todas las funciones de autenticación
 export const authController = {
   register: async (req: Request, res: Response) => {
     try {
@@ -28,6 +28,7 @@ export const authController = {
           email,
           password: hashedPassword,
           estado: true,
+          role: 'user', // Asigna un rol por defecto 'user' al registrar
           token: '', // Podrías considerar no guardar el token aquí, o manejarlo de otra forma si solo es para sesión.
         }
       });
@@ -54,56 +55,62 @@ export const authController = {
         return res.status(401).json({ error: 'Contraseña incorrecta' });
       }
 
-      // Asegúrate de que JWT_SECRET esté definido en tus variables de entorno
       if (!process.env.JWT_SECRET) {
         console.error('JWT_SECRET no está definido en las variables de entorno.');
         return res.status(500).json({ error: 'Configuración del servidor incompleta.' });
       }
 
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-        expiresIn: '1h',
-      });
+      // CAMBIO CLAVE: Incluye 'role' en el payload del token JWT
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role }, // <--- ¡Asegúrate de que 'role: user.role' esté aquí!
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
 
       await prisma.user.update({
         where: { id: user.id },
-        data: { token } // Guarda el token en la DB, aunque muchos prefieren solo devolverlo.
+        data: { token }
       });
 
-      res.status(200).json({ message: 'Login exitoso', token });
+      // Devuelve el rol del usuario al frontend en la respuesta del login
+      res.status(200).json({ message: 'Login exitoso', token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } catch (error) {
       console.error('❌ Error en el login:', error);
       res.status(500).json({ error: 'Error en el login' });
     }
   },
 
-  // Función para obtener el perfil del usuario autenticado
   getProfile: async (req: Request, res: Response) => {
     try {
-      // El middleware 'authenticate' debería adjuntar el ID del usuario al objeto 'req'
-      const userId = (req as any).user?.userId;
+      // El middleware 'authenticate' adjunta req.user con { id, email, role }
+      const userIdFromToken = req.user?.id;
 
-      if (!userId) {
+      if (!userIdFromToken) {
+        console.warn('⚠️ getProfile: ID de usuario no encontrado en req.user. Esto puede indicar un problema con el middleware de autenticación o un token inválido.');
         return res.status(401).json({ error: 'No autorizado: ID de usuario no encontrado en el token.' });
       }
 
+      console.log('Intentando obtener perfil para userId:', userIdFromToken); // Log para depuración
+
       const user = await prisma.user.findUnique({
-        where: { id: userId },
+        where: { id: userIdFromToken },
         select: {
           id: true,
           name: true,
           email: true,
-          estado: true,
-          // NO incluyas 'password' ni 'token' por seguridad aquí
+          estado: true, // Descomentado: Asumiendo que 'estado' ya existe y es booleano
+          role: true,   // Descomentado: Asumiendo que 'role' ya existe y es string
         },
       });
 
       if (!user) {
+        console.warn(`⚠️ getProfile: Usuario con ID ${userIdFromToken} no encontrado en la base de datos.`);
         return res.status(404).json({ error: 'Usuario no encontrado.' });
       }
 
       res.json(user);
-    } catch (error) {
-      console.error('❌ Error al obtener perfil del usuario:', error);
+    } catch (error: any) {
+      console.error('❌ Error al obtener perfil del usuario:', error.message, error.stack);
       res.status(500).json({ error: 'Error interno del servidor al obtener perfil.' });
     }
   },

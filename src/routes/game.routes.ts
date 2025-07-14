@@ -1,24 +1,15 @@
+// backend_project/src/routes/game.routes.ts
+
 import { Router } from 'express';
-// ¡CAMBIO CLAVE AQUÍ! Importa el objeto gameController completo
-import { gameController } from '../controllers/game.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+import { gameController } from '../controllers/game.controller'; // Correcto: importa el objeto gameController
+import { authenticate } from '../middlewares/auth.middleware'; // Correcto: importa el middleware
 
 const router = Router();
 
-// Ruta protegida para listar juegos (READ ALL)
-router.get('/', authenticate, gameController.listGames); // Accede a la función a través del objeto
-
-// Ruta protegida para crear un nuevo videojuego (CREATE)
-router.post('/', authenticate, gameController.create); // Accede a la función a través del objeto
-
-// Rutas para obtener, actualizar y eliminar
-// Ruta protegida para OBTENER un juego por ID (READ ONE)
-router.get('/:id', authenticate, gameController.getGameById); // Accede a la función a través del objeto
-
-// Ruta protegida para ACTUALIZAR un juego existente (UPDATE)
-router.put('/:id', authenticate, gameController.updateGame); // Accede a la función a través del objeto
-
-// Ruta protegida para ELIMINAR un juego (DELETE)
-router.delete('/:id', authenticate, gameController.deleteGame); // Accede a la función a través del objeto
+router.get('/', authenticate, gameController.getAllGames); // Esto funcionará si gameController.getAllGames es una función
+router.get('/:id', authenticate, gameController.getGameById);
+router.post('/', authenticate, gameController.createGame);
+router.put('/:id', authenticate, gameController.updateGame);
+router.delete('/:id', authenticate, gameController.deleteGame);
 
 export default router;

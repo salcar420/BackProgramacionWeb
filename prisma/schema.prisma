@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,20 +10,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Modelo de Usuario - ¡CAMBIO CLAVE AQUÍ!
 model User {
   id        Int       @id @default(autoincrement())
   name      String
   email     String    @unique
   password  String
   createdAt DateTime  @default(now())
-
-  reviews   Review[]
-  orders    Order[]
-  cart      CartItem[]
-  games     Game[]
-
   estado    Boolean   @default(true)
   token     String?
+  role      String    @default("user") // <--- ¡NUEVA LÍNEA AÑADIDA!
+  // Esto crea una columna 'role' de tipo texto con valor por defecto 'user'.
+
+  reviews   Review[]
+  orders    Order[] @relation(name: "UserToOrder")
+  cart      CartItem[] @relation(name: "UserToCartItem")
+  games     Game[]
 }
 
 model Game {
@@ -36,15 +41,15 @@ model Game {
   user          User        @relation(fields: [userId], references: [id])
   userId        Int
 
-  categoria     Categoria   @relation(fields: [categoriaId], references: [id])
-  categoriaId   Int
+  categoria     Categoria?   @relation(fields: [categoriaId], references: [id])
+  categoriaId   Int?
 
-  plataforma    Plataforma  @relation(fields: [plataformaId], references: [id])
-  plataformaId  Int
+  plataforma    Plataforma?  @relation(fields: [plataformaId], references: [id])
+  plataformaId  Int?
 
   reviews       Review[]
-  cartItems     CartItem[]
-  orders        Order[]
+  cartItems     CartItem[] @relation(name: "GameToCartItem")
+  orders        Order[] @relation(name: "GameToOrder")
 }
 
 model Review {
@@ -65,20 +70,20 @@ model Order {
   createdAt DateTime @default(now())
   code      String   @unique
 
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(name: "UserToOrder", fields: [userId], references: [id])
   userId    Int
 
-  game      Game     @relation(fields: [gameId], references: [id])
-  gameId    Int
+  game      Game?     @relation(name: "GameToOrder", fields: [gameId], references: [id])
+  gameId    Int?
 }
 
 model CartItem {
   id      Int   @id @default(autoincrement())
 
-  user    User  @relation(fields: [userId], references: [id])
+  user    User  @relation(name: "UserToCartItem", fields: [userId], references: [id])
   userId  Int
 
-  game    Game  @relation(fields: [gameId], references: [id])
+  game    Game  @relation(name: "GameToCartItem", fields: [gameId], references: [id])
   gameId  Int
 }
 
@@ -86,6 +91,7 @@ model News {
   id        Int      @id @default(autoincrement())
   title     String
   content   String
+  imageUrl  String?
   createdAt DateTime @default(now())
   activo    Boolean  @default(true)
 }
